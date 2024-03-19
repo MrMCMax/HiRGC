@@ -499,6 +499,8 @@ void show_usage() {
 
 //Max: change main name
 int de_hirgc_main(int argc, char *argv[]) {
+	//Reset argv counter from previous invocation
+	optind=1;
 	vector<string> chr_name_list;
 	vector<string> fold_list;
 

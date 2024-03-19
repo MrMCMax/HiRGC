@@ -125,6 +125,52 @@ void readRefFile(char *refFile) { // processing reference file
 	ref_seq_len = _ref_seq_len;
 }
 
+/**
+ * Reads a reference FASTA file safely
+*/
+void readRefFileSafe(char *refFile) {
+	int _ref_seq_len = 0;
+	//Open the file as a C++ stream
+	std::ifstream file;
+	//Abort on any exception
+	file.exceptions(std::ifstream::failbit | std::ifstream::badbit | std::ifstream::eofbit);
+	//Open file
+	file.open(refFile, std::ios_base::binary);
+	//Read first line
+	std::string fastaLine;
+	std::getline(file, fastaLine);
+	//Where are we?
+	std::size_t second_line = file.tellg();
+	//Find the length of the file, so we can allocate an upper bound of memory
+	file.seekg(0, file.end);
+	//Get the length of the whole file
+	std::size_t length = file.tellg();
+	//Go back to the start
+	file.seekg(second_line, file.beg);
+	//Only read the necessary bytes
+	length = length - second_line;
+	//Now we know the length of the file. Read it in one batch
+	char *arr = new char[length];
+	file.read(arr, length);
+	file.close();
+	//We have read the file. We can start processing it
+	char temp_ch;
+	int index;
+	for (std::size_t i = 0; i < length; i++) {
+		temp_ch = arr[i];
+		//Convert all lower-case characters to upper case (non-alphabetic characters are unchanged)
+		if (islower(temp_ch)) {
+			temp_ch = toupper(temp_ch);
+		}
+		index = agctIndex(temp_ch);
+		if (index^4) {//only A T C T are saved
+			ref_seq_code[_ref_seq_len++] = index;
+		}
+	}
+	ref_seq_len = _ref_seq_len;
+	delete[] arr;
+}
+
 void readTarFile(char *tarFile) {// processing target file; recording all auxiliary information  
 	
 	FILE *fp = fopen(tarFile, "r");
@@ -415,7 +461,7 @@ void searchMatch(char *refFile) { // greedy matching
 }
 
 inline void compressFile(char *refFile, char *tarFile, char *resFile) {
-	readRefFile(refFile);
+	readRefFileSafe(refFile);
 	preProcessRef();
 	readTarFile(tarFile);
 	searchMatch(resFile);
@@ -488,7 +534,7 @@ int compressSet(char *ref_fold, vector<string> &fold_list, vector<string> &chr_n
 
 		sprintf(ref, "%s/%s", ref_fold, chr_name_list[i].c_str());
 
-		readRefFile(ref);
+		readRefFileSafe(ref);
 		preProcessRef();
 
 		for (int ti = 0; ti < fold_size; ti++) {
@@ -565,6 +611,8 @@ void show_usage() {
 
 //Max: change name of main
 int hirgc_main(int argc, char *argv[]) {
+	//Max: Reset getopt
+	optind = 1;
 	vector<string> chr_name_list;
 	vector<string> fold_list;
 
@@ -671,6 +719,7 @@ int hirgc_main(int argc, char *argv[]) {
 	gettimeofday(&end,NULL);
 	timer = 1000000 * (end.tv_sec - start.tv_sec) + end.tv_usec - start.tv_usec;
 	printf("total compression timer = %lf ms; %lf min\n", timer/1000.0, timer/1000.0/1000.0/60.0);
+	return 0;
 }
 
 }
