@@ -15,6 +15,8 @@
 # include <unistd.h>
 
 using namespace std;
+
+namespace hirgc_compress {
  
 const int MAX_CHAR_NUM = 1<<28;//maximum length of a chromosome
 const int code_rule[4] = {0, 1, 2, 3};//A-0; C-1; G-2; T-3; encoding rule //discarded
@@ -558,8 +560,8 @@ void show_usage() {
 	cout << "  hirgc -m set -r YH -t genome_set.txt -n chr_name.txt\n";
 }
 
-
-int main(int argc, char *argv[]) {
+//Max: change name of main
+int hirgc_main(int argc, char *argv[]) {
 	vector<string> chr_name_list;
 	vector<string> fold_list;
 
@@ -666,4 +668,6 @@ int main(int argc, char *argv[]) {
 	gettimeofday(&end,NULL);
 	timer = 1000000 * (end.tv_sec - start.tv_sec) + end.tv_usec - start.tv_usec;
 	printf("total compression timer = %lf ms; %lf min\n", timer/1000.0, timer/1000.0/1000.0/60.0);
+}
+
 }
