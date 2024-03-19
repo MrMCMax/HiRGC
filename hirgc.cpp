@@ -105,10 +105,13 @@ void readRefFile(char *refFile) { // processing reference file
 	
 	// fscanf(fp, "%s", ch);//meta_data
 	fgets(ch, 1024, fp);
+	//Reads any number of non-whitespace characters, stopping at the first whitespace character found.
+	//A terminating null character is automatically added to the end of the stored sequence.
 	while (fscanf(fp, "%s", ch) != EOF) {
 		temp_len = strlen(ch);
 		for (int i = 0; i < temp_len; i++) {
 			temp_ch = ch[i];
+			//Convert all lower-case characters to upper case (non-alphabetic characters are unchanged)
 			if (islower(temp_ch)) {
 				temp_ch = toupper(temp_ch);
 			}
