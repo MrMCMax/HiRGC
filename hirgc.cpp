@@ -13,6 +13,7 @@
 # include <string>
 # include <utility>
 # include <unistd.h>
+# include <string>
 
 using namespace std;
 
@@ -37,7 +38,7 @@ struct POSITION_OTHER_CHAR {//for other characters
 };
 
 //for target and ref genomic
-char *meta_data; // identifier
+std::string meta_data; // identifier
 POSITION_RANGE *pos_vec, *n_vec; //pos_ver is intervals of low-case letters; n_vec for the letter 'N'
 POSITION_OTHER_CHAR *other_char_vec; // for other characters
 int *line_break_vec;//EOL character; equivalent length of short sequence
@@ -47,8 +48,38 @@ int *loc; //an array of header points
 int *point; // an array of entries
 char *dismatched_str; //mismatched subsequence
 
+int get_file_size(char *path) {
+    //We open the file and get its size in bytes
+    std::ifstream file;
+    file.exceptions(std::ifstream::badbit);
+    file.open(path, std::ifstream::binary);
+    file.seekg(0, file.end);
+    int length = file.tellg();
+    file.close();
+    return length;
+}
+
+inline void initial(char *tar_file, char *ref_file) { // malloc momories
+	/**
+	 * We are going to get the actual size of the file for this thing
+	*/
+	int tar_size = get_file_size(tar_file);
+	int ref_size = get_file_size(ref_file);
+	pos_vec = new POSITION_RANGE[tar_size];
+	line_break_vec = new int[tar_size];
+	n_vec = new  POSITION_RANGE[tar_size];
+	other_char_vec = new POSITION_OTHER_CHAR[tar_size];
+
+	tar_seq_code = new int[tar_size];
+	ref_seq_code = new int[ref_size];
+
+	loc = new int[MAX_CHAR_NUM];
+	point = new int[max_arr_num];
+
+	dismatched_str = new char[min_size];
+}
+
 inline void initial() { // malloc momories
-	meta_data = new char[1024];
 	pos_vec = new POSITION_RANGE[min_size];
 	line_break_vec = new int[1<<23];
 	n_vec = new  POSITION_RANGE[min_size];
@@ -64,7 +95,7 @@ inline void initial() { // malloc momories
 }
 
 inline void clear() { // free
-	delete[] meta_data;
+	meta_data.clear(); meta_data.shrink_to_fit();
 	delete[] pos_vec;
 	delete[] line_break_vec;
 	delete[] n_vec;
@@ -145,10 +176,10 @@ void readRefFileSafe(char *refFile) {
 	file.seekg(0, file.end);
 	//Get the length of the whole file
 	std::size_t length = file.tellg();
-	//Go back to the start
-	file.seekg(second_line, file.beg);
 	//Only read the necessary bytes
 	length = length - second_line;
+	//Go back to the start
+	file.seekg(second_line, file.beg);
 	//Now we know the length of the file. Read it in one batch
 	char *arr = new char[length];
 	file.read(arr, length);
@@ -171,14 +202,13 @@ void readRefFileSafe(char *refFile) {
 	delete[] arr;
 }
 
-void readTarFile(char *tarFile) {// processing target file; recording all auxiliary information  
-	
-	FILE *fp = fopen(tarFile, "r");
-	if (NULL == fp) {
+void readTarFileSafe(char *tarFile) {// processing target file; recording all auxiliary information  
+	std::ifstream fp(tarFile);
+	if (!fp) {
 		printf("fail to open file %s\n", tarFile);
 		return;
 	}
-	char ch[1024], chr;
+	char chr;
 	
 	int _tar_seq_len = 0;
 	other_char_len = 0, n_vec_len = 0;
@@ -188,64 +218,63 @@ void readTarFile(char *tarFile) {// processing target file; recording all auxili
 	bool flag = true, n_flag = false; // first is upper case //first is not N
 
 	// fscanf(fp, "%s", meta_data); //meta_data
-	fgets(meta_data, 1024, fp);
-
-	while (fscanf(fp, "%s", ch) != EOF) {
-		ch_len = strlen(ch);
-
-		for (int i = 0; i < ch_len; i++) {
-			chr = ch[i];
-			if (islower(chr)) {
-				if (flag) { //previous is upper case
-					flag = false; //change status of switch
-					pos_vec[pos_vec_len].begin = (letters_len);
+	//We just read one line. Note that the newline won't be appended but in the original code
+	//it is there
+	std::getline(fp, meta_data);
+	meta_data.append("\n");
+	int i = 0;
+	while (fp >> chr) {
+		if (islower(chr)) {
+			if (flag) { //previous is upper case
+				flag = false; //change status of switch
+				pos_vec[pos_vec_len].begin = (letters_len);
+				letters_len = 0;
+			}
+			chr = toupper(chr);
+		} else {
+			if (isupper(chr)) {
+				if (!flag) {
+					flag = true;
+					pos_vec[pos_vec_len].length = (letters_len);
+					pos_vec_len++;
 					letters_len = 0;
 				}
-				chr = toupper(chr);
-			} else {
-				if (isupper(chr)) {
-					if (!flag) {
-						flag = true;
-						pos_vec[pos_vec_len].length = (letters_len);
-						pos_vec_len++;
-						letters_len = 0;
-					}
-				}
 			}
-			letters_len++;
-
-			//ch is an upper letter
-			if (chr != 'N') {
-				index = agctIndex(chr);
-				if (index^4) {
-					// tar_seq_code[tar_seq_len++] = code_rule[index];
-					tar_seq_code[_tar_seq_len++] = index;
-				} else {
-					other_char_vec[other_char_len].pos = _tar_seq_len;
-					other_char_vec[other_char_len].ch = chr-'A';
-					other_char_len++;
-				}
-			}
-
-			if (!n_flag) {
-				if (chr == 'N') {
-					n_vec[n_vec_len].begin = n_letters_len;
-					n_letters_len = 0;
-					n_flag = true;
-				}
-			} else {//n_flag = true
-				if (chr != 'N'){
-					n_vec[n_vec_len].length = n_letters_len;
-					n_vec_len++;
-					n_letters_len = 0;
-					n_flag = false;
-				}
-			}
-			n_letters_len++;
-
 		}
-		line_break_vec[line_break_len++] = ch_len;
+		letters_len++;
+
+		//ch is an upper letter
+		if (chr != 'N') {
+			index = agctIndex(chr);
+			if (index^4) {
+				// tar_seq_code[tar_seq_len++] = code_rule[index];
+				tar_seq_code[_tar_seq_len++] = index;
+			} else {
+				other_char_vec[other_char_len].pos = _tar_seq_len;
+				other_char_vec[other_char_len].ch = chr-'A';
+				other_char_len++;
+			}
+		}
+
+		if (!n_flag) {
+			if (chr == 'N') {
+				n_vec[n_vec_len].begin = n_letters_len;
+				n_letters_len = 0;
+				n_flag = true;
+			}
+		} else {//n_flag = true
+			if (chr != 'N'){
+				n_vec[n_vec_len].length = n_letters_len;
+				n_vec_len++;
+				n_letters_len = 0;
+				n_flag = false;
+			}
+		}
+		n_letters_len++;
+		i++;
 	}
+	line_break_vec[line_break_len++] = ch_len;
+
 
 	if (!flag) {
 		pos_vec[pos_vec_len].length = (letters_len);
@@ -260,7 +289,7 @@ void readTarFile(char *tarFile) {// processing target file; recording all auxili
 	for (int i = other_char_len-1; i > 0; i--) {
 		other_char_vec[i].pos -= other_char_vec[i-1].pos;
 	}
-	fclose(fp);
+	fp.close();
 	tar_seq_len = _tar_seq_len;
 }
 
@@ -463,14 +492,14 @@ void searchMatch(char *refFile) { // greedy matching
 inline void compressFile(char *refFile, char *tarFile, char *resFile) {
 	readRefFileSafe(refFile);
 	preProcessRef();
-	readTarFile(tarFile);
+	readTarFileSafe(tarFile);
 	searchMatch(resFile);
 }
 
 void compressFile(char *refFile, char *tarFile) {
 	char res[100];
 	char cmd[200];
-	initial(); //important************* must initial before other operation
+	initial(tarFile, refFile); //important************* must initial before other operation
 
 	sprintf(res, "%s_ref_%s", tarFile, refFile);
 	compressFile(refFile, tarFile, res);
@@ -541,7 +570,7 @@ int compressSet(char *ref_fold, vector<string> &fold_list, vector<string> &chr_n
 			sprintf(temp, "%s_ref_%s", fold_list[ti].c_str(), ref_fold);
 
 			sprintf(tar, "%s/%s", fold_list[ti].c_str(), chr_name_list[i].c_str());
-			readTarFile(tar);
+			readTarFileSafe(tar);
 
 			printf("compressing %s ...\n", tar);
 
