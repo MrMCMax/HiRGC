@@ -44,10 +44,28 @@ int other_char_len, str_len, tar_seq_len, ref_seq_len, pos_vec_len, n_vec_len, l
 
 const int sub_str_num = 20;
 
+int get_file_size(char *path) {
+    //We open the file and get its size in bytes
+    std::ifstream file;
+    file.exceptions(std::ifstream::badbit);
+    file.open(path, std::ifstream::binary);
+    file.seekg(0, file.end);
+    int length = file.tellg();
+    file.close();
+    return length;
+}
+
 void initial() {
 	meta_data = new char[2048];
 	tar_seq = new char[MAX_CHAR_NUM];
 	ref_seq = new char[MAX_CHAR_NUM];
+}
+
+void initialSafe(char *refFile, char *tarFile) {
+	meta_data = new char[2048];
+	std::size_t ref_size = get_file_size(refFile);
+	tar_seq = new char[MAX_CHAR_NUM];
+	ref_seq = new char[ref_size];
 }
 
 void clear() {
@@ -67,9 +85,10 @@ void readRefFile(char *refFile) {
 	}
 	int temp_len;
 	char temp_ch;
-	fgets(ch, 2048, fp);
+	fgets(ch, 2048, fp); //Ignores the first line
 
-	while (fscanf(fp, "%s", ch) != EOF) {
+	//Gets the first line in ch, by replacing the newline character with a \0
+	while (fscanf(fp, "%s", ch) != EOF) {	
 		// printf("%s\n", ch);
 		temp_len = strlen(ch);
 		for (int i = 0; i < temp_len; i++) {
@@ -84,6 +103,36 @@ void readRefFile(char *refFile) {
 	}
 	ref_seq[ref_seq_len] = '\0';
 	fclose(fp);
+}
+
+void readRefFileSafe(char *refFile) {
+	ref_seq_len = 0;
+	//We open the file with binary format because we are going to process
+	//each character
+	std::ifstream file;
+	file.exceptions(std::ifstream::badbit);
+	file.open(refFile, std::ios_base::binary);
+	if (!file) {
+		printf("fail to open file %s\n", refFile);
+		exit(0);
+		return;
+	}
+	char temp_ch;
+	//Ignore first line
+	std::string first_line;
+	std::getline(file, first_line);
+	//Get the input character by character. We really don't care about anything that is not
+	//an A, G, C or T
+	while (file.get(temp_ch)) {
+		if (islower(temp_ch)) {
+			temp_ch = toupper(temp_ch);
+		}
+		if (temp_ch == 'A' || temp_ch == 'G' || temp_ch == 'C' || temp_ch == 'T' ) {
+			ref_seq[ref_seq_len++] = temp_ch;
+		}
+	}
+	ref_seq[ref_seq_len] = '\0';
+	file.close();
 }
 
 void readRunLengthCoding(FILE *fp, int &vec_len, int **vec) {
@@ -325,7 +374,7 @@ void saveDecompressedData(char *resultFile) {
 }
 
 void decompressFile(char *refFile, char *tarFile, char *resultFile) {
-	readRefFile(refFile);//must read first;
+	readRefFileSafe(refFile);//must read first;
 	// cerr << "after readRefFile()...\n";
 	readCompressedFile(tarFile);
 	// cerr << "after readCompressedFile()...\n";
@@ -333,7 +382,7 @@ void decompressFile(char *refFile, char *tarFile, char *resultFile) {
 }
 
 void decompressFile(char *refFile, char *tarFile) {
-	initial();//****important
+	initialSafe(refFile, tarFile);//****important
 	char cmd[1024]; 
 	sprintf(cmd, "./7za x %s", tarFile);
 	system(cmd);
@@ -606,6 +655,7 @@ int de_hirgc_main(int argc, char *argv[]) {
 	gettimeofday(&end,NULL);
 	timer = 1000000 * (end.tv_sec - start.tv_sec) + end.tv_usec - start.tv_usec;
 	printf("total decompression timer = %lf ms; %lf min\n", timer/1000.0, timer/1000.0/1000.0/60.0);
+	return 0;
 }
 
 }

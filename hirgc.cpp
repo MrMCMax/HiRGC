@@ -203,7 +203,9 @@ void readRefFileSafe(char *refFile) {
 }
 
 void readTarFileSafe(char *tarFile) {// processing target file; recording all auxiliary information  
-	std::ifstream fp(tarFile);
+	std::ifstream fp;
+	fp.exceptions(std::ifstream::badbit);
+	fp.open(tarFile, std::ifstream::binary);
 	if (!fp) {
 		printf("fail to open file %s\n", tarFile);
 		return;
@@ -214,7 +216,7 @@ void readTarFileSafe(char *tarFile) {// processing target file; recording all au
 	other_char_len = 0, n_vec_len = 0;
 	pos_vec_len = line_break_len = 0;
 
-	int letters_len = 0, n_letters_len = 0, index, ch_len;
+	int letters_len = 0, n_letters_len = 0, index, ch_len = 0;
 	bool flag = true, n_flag = false; // first is upper case //first is not N
 
 	// fscanf(fp, "%s", meta_data); //meta_data
@@ -223,57 +225,62 @@ void readTarFileSafe(char *tarFile) {// processing target file; recording all au
 	std::getline(fp, meta_data);
 	meta_data.append("\n");
 	int i = 0;
-	while (fp >> chr) {
-		if (islower(chr)) {
-			if (flag) { //previous is upper case
-				flag = false; //change status of switch
-				pos_vec[pos_vec_len].begin = (letters_len);
-				letters_len = 0;
-			}
-			chr = toupper(chr);
-		} else {
-			if (isupper(chr)) {
-				if (!flag) {
-					flag = true;
-					pos_vec[pos_vec_len].length = (letters_len);
-					pos_vec_len++;
+	while (fp) {
+		while (fp.get(chr)) {
+			if (chr == '\n')
+				break;
+			if (islower(chr)) {
+				if (flag) { //previous is upper case
+					flag = false; //change status of switch
+					pos_vec[pos_vec_len].begin = (letters_len);
 					letters_len = 0;
 				}
-			}
-		}
-		letters_len++;
-
-		//ch is an upper letter
-		if (chr != 'N') {
-			index = agctIndex(chr);
-			if (index^4) {
-				// tar_seq_code[tar_seq_len++] = code_rule[index];
-				tar_seq_code[_tar_seq_len++] = index;
+				chr = toupper(chr);
 			} else {
-				other_char_vec[other_char_len].pos = _tar_seq_len;
-				other_char_vec[other_char_len].ch = chr-'A';
-				other_char_len++;
+				if (isupper(chr)) {
+					if (!flag) {
+						flag = true;
+						pos_vec[pos_vec_len].length = (letters_len);
+						pos_vec_len++;
+						letters_len = 0;
+					}
+				}
 			}
-		}
+			letters_len++;
 
-		if (!n_flag) {
-			if (chr == 'N') {
-				n_vec[n_vec_len].begin = n_letters_len;
-				n_letters_len = 0;
-				n_flag = true;
+			//ch is an upper letter
+			if (chr != 'N') {
+				index = agctIndex(chr);
+				if (index^4) {
+					// tar_seq_code[tar_seq_len++] = code_rule[index];
+					tar_seq_code[_tar_seq_len++] = index;
+				} else {
+					other_char_vec[other_char_len].pos = _tar_seq_len;
+					other_char_vec[other_char_len].ch = chr-'A';
+					other_char_len++;
+				}
 			}
-		} else {//n_flag = true
-			if (chr != 'N'){
-				n_vec[n_vec_len].length = n_letters_len;
-				n_vec_len++;
-				n_letters_len = 0;
-				n_flag = false;
+
+			if (!n_flag) {
+				if (chr == 'N') {
+					n_vec[n_vec_len].begin = n_letters_len;
+					n_letters_len = 0;
+					n_flag = true;
+				}
+			} else {//n_flag = true
+				if (chr != 'N'){
+					n_vec[n_vec_len].length = n_letters_len;
+					n_vec_len++;
+					n_letters_len = 0;
+					n_flag = false;
+				}
 			}
+			n_letters_len++;
+			i++;
 		}
-		n_letters_len++;
-		i++;
+		line_break_vec[line_break_len++] = chr;
 	}
-	line_break_vec[line_break_len++] = ch_len;
+	
 
 
 	if (!flag) {
@@ -320,7 +327,7 @@ void writeRunLengthCoding(FILE *fp, int vec_len, int *vec) { // run-length codin
 }
 
 void saveOtherData(FILE *fp) { // write auxiliary information to file
-	fprintf(fp, "%s\n", meta_data);//identifier
+	fprintf(fp, "%s\n", meta_data.c_str());//identifier
 	//------------------------
 	writeRunLengthCoding(fp, line_break_len, line_break_vec);//length of shor seuqences
 	//------------------------
