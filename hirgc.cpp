@@ -14,6 +14,7 @@
 # include <utility>
 # include <unistd.h>
 # include <string>
+# include <filesystem>
 
 using namespace std;
 
@@ -510,7 +511,12 @@ void compressFile(char *refFile, char *tarFile) {
 
 	sprintf(res, "%s_ref_%s", tarFile, refFile);
 	compressFile(refFile, tarFile, res);
-	sprintf(cmd, "./7za a %s.7z %s -m0=PPMd", res, res);
+	//7za call
+	if (std::filesystem::exists(".7za")) {
+		sprintf(cmd, "./7za a %s.7z %s -m0=PPMd", res, res);
+	} else {
+		sprintf(cmd, "7za a %s.7z %s -m0=PPMd", res, res);
+	}
 	system(cmd);
 	sprintf(cmd, "rm %s", res);
 	system(cmd);

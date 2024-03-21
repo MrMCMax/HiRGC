@@ -13,6 +13,7 @@
 # include <string>
 # include <utility>
 # include <unistd.h>
+#include <filesystem>
 
 using namespace std;
 
@@ -384,7 +385,11 @@ void decompressFile(char *refFile, char *tarFile, char *resultFile) {
 void decompressFile(char *refFile, char *tarFile) {
 	initialSafe(refFile, tarFile);//****important
 	char cmd[1024]; 
-	sprintf(cmd, "./7za x %s", tarFile);
+	if (std::filesystem::exists(".7za")) {
+		sprintf(cmd, "./7za x %s", tarFile);
+	} else {
+		sprintf(cmd, "7za x %s", tarFile);
+	}
 	system(cmd);
 
 	printf("decompressing...\n");
