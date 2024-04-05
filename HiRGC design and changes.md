@@ -21,3 +21,5 @@ I have created a new version of initial() to use with the file mode. The other m
 In HiRGC, I flattened the two loops that read the tar file to just one while loop that reads characters in a formatted input way.
 
 I set the arrays tar_seq_code, pos_vec, line_break_vec, n_vec, and other_char_vec to all use the size of the tar file. I changed ref_seq_code to use the size of the ref file.
+
+The answer

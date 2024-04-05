@@ -119,12 +119,24 @@ void readRefFileSafe(char *refFile) {
 		return;
 	}
 	char temp_ch;
+	//Get length
+	file.seekg(0, file.end);
+	std::size_t length = file.tellg();
+	file.seekg(0, file.beg);
 	//Ignore first line
-	std::string first_line;
-	std::getline(file, first_line);
+	if (file.peek() == '>') {
+		std::string first_line;
+		std::getline(file, first_line);
+		length = length - file.tellg();
+	}
+	char *buf = new char[length];
+	//Read in one go
+	file.read(buf, length);
+	//Process
 	//Get the input character by character. We really don't care about anything that is not
 	//an A, G, C or T
-	while (file.get(temp_ch)) {
+	for (int i = 0; i < length; i++) {
+		temp_ch = buf[i];
 		if (islower(temp_ch)) {
 			temp_ch = toupper(temp_ch);
 		}
@@ -133,6 +145,7 @@ void readRefFileSafe(char *refFile) {
 		}
 	}
 	ref_seq[ref_seq_len] = '\0';
+	delete[] buf;
 	file.close();
 }
 

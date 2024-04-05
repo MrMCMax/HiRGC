@@ -195,12 +195,54 @@ void readRefFileSafe(char *refFile) {
 			temp_ch = toupper(temp_ch);
 		}
 		index = agctIndex(temp_ch);
-		if (index^4) {//only A T C T are saved
+		if (index^4) {//only A T C G are saved
 			ref_seq_code[_ref_seq_len++] = index;
 		}
 	}
 	ref_seq_len = _ref_seq_len;
 	delete[] arr;
+}
+
+/**
+ * Reads a pre-processed FASTA file that only contains the first line and the symbols ACGT.
+*/
+void readRefFilePreprocessed(char *refFile) {
+	std::ifstream file;
+	file.exceptions(std::ifstream::badbit);
+	file.open(refFile, std::ifstream::binary);
+	//Get file size
+	file.seekg(0, file.end);
+	std::size_t length = file.tellg();
+	file.seekg(0, file.beg);
+	//If the first line is FASTA definition, ignore it
+	char c = file.peek();
+	if (c == '>') {
+		std::string fasta;
+		std::getline(file, fasta);
+		//Reduce the length of the data
+		std::size_t curr_pos = file.tellg();
+		length = length - curr_pos;
+	}
+	//Allocate memory to read
+	char *buf = new char[length];
+	file.read(buf, length);
+	//Process to ints
+	int _ref_seq_len = 0;
+	char temp_ch;
+	int index;
+	for (std::size_t i = 0; i < length; i++) {
+		temp_ch = buf[i];
+		//Convert all lower-case characters to upper case (non-alphabetic characters are unchanged)
+		if (islower(temp_ch)) {
+			temp_ch = toupper(temp_ch);
+		}
+		index = agctIndex(temp_ch);
+		if (index^4) {//only A T C G are saved
+			ref_seq_code[_ref_seq_len++] = index;
+		}
+	}
+	ref_seq_len = _ref_seq_len;
+	delete[] buf;
 }
 
 void readTarFileSafe(char *tarFile) {// processing target file; recording all auxiliary information  
@@ -220,69 +262,81 @@ void readTarFileSafe(char *tarFile) {// processing target file; recording all au
 	int letters_len = 0, n_letters_len = 0, index, ch_len = 0;
 	bool flag = true, n_flag = false; // first is upper case //first is not N
 
+	//Get the length of the file so that we know how much to allocate
+	fp.seekg(0, fp.end);
+	std::size_t length = fp.tellg();
+	fp.seekg(0, fp.beg);
 	// fscanf(fp, "%s", meta_data); //meta_data
 	//We just read one line. Note that the newline won't be appended but in the original code
 	//it is there
 	std::getline(fp, meta_data);
 	meta_data.append("\n");
-	int i = 0;
-	while (fp) {
-		while (fp.get(chr)) {
-			if (chr == '\n')
-				break;
-			if (islower(chr)) {
-				if (flag) { //previous is upper case
-					flag = false; //change status of switch
-					pos_vec[pos_vec_len].begin = (letters_len);
+	length = length - fp.tellg(); //Ignore the first line
+	//Allocate buffer
+	char *buf = new char[length];
+	//Read in one go
+	fp.read(buf, length);
+	//Process
+	for (int i = 0; i < length; i++) {
+		chr = buf[i];
+		if (chr == '\n'){
+			line_break_vec[line_break_len++] = i;
+			continue;
+		}
+		if (islower(chr)) {
+			if (flag) { //previous is upper case
+				flag = false; //change status of switch
+				pos_vec[pos_vec_len].begin = (letters_len);
+				letters_len = 0;
+			}
+			chr = toupper(chr);
+		} else {
+			if (isupper(chr)) {
+				if (!flag) {
+					flag = true;
+					pos_vec[pos_vec_len].length = (letters_len);
+					pos_vec_len++;
 					letters_len = 0;
 				}
-				chr = toupper(chr);
-			} else {
-				if (isupper(chr)) {
-					if (!flag) {
-						flag = true;
-						pos_vec[pos_vec_len].length = (letters_len);
-						pos_vec_len++;
-						letters_len = 0;
-					}
-				}
 			}
-			letters_len++;
-
-			//ch is an upper letter
-			if (chr != 'N') {
-				index = agctIndex(chr);
-				if (index^4) {
-					// tar_seq_code[tar_seq_len++] = code_rule[index];
-					tar_seq_code[_tar_seq_len++] = index;
-				} else {
-					other_char_vec[other_char_len].pos = _tar_seq_len;
-					other_char_vec[other_char_len].ch = chr-'A';
-					other_char_len++;
-				}
-			}
-
-			if (!n_flag) {
-				if (chr == 'N') {
-					n_vec[n_vec_len].begin = n_letters_len;
-					n_letters_len = 0;
-					n_flag = true;
-				}
-			} else {//n_flag = true
-				if (chr != 'N'){
-					n_vec[n_vec_len].length = n_letters_len;
-					n_vec_len++;
-					n_letters_len = 0;
-					n_flag = false;
-				}
-			}
-			n_letters_len++;
-			i++;
 		}
-		line_break_vec[line_break_len++] = chr;
+		letters_len++;
+
+		//ch is an upper letter
+		if (chr != 'N') {
+			index = agctIndex(chr);
+			if (index^4) {
+				// tar_seq_code[tar_seq_len++] = code_rule[index];
+				tar_seq_code[_tar_seq_len++] = index;
+			} else {
+				other_char_vec[other_char_len].pos = _tar_seq_len;
+				other_char_vec[other_char_len].ch = chr-'A';
+				other_char_len++;
+			}
+		}
+
+		if (!n_flag) {
+			if (chr == 'N') {
+				n_vec[n_vec_len].begin = n_letters_len;
+				n_letters_len = 0;
+				n_flag = true;
+			}
+		} else {//n_flag = true
+			if (chr != 'N'){
+				n_vec[n_vec_len].length = n_letters_len;
+				n_vec_len++;
+				n_letters_len = 0;
+				n_flag = false;
+			}
+		}
+		n_letters_len++;
+	}
+	//There seems to be a bug in decompression if we don't have any
+	//line breaks
+	if (line_break_len == 0) {
+		line_break_vec[line_break_len++] = 1; //One line break at least
 	}
 	
-
 
 	if (!flag) {
 		pos_vec[pos_vec_len].length = (letters_len);
@@ -298,6 +352,7 @@ void readTarFileSafe(char *tarFile) {// processing target file; recording all au
 		other_char_vec[i].pos -= other_char_vec[i-1].pos;
 	}
 	fp.close();
+	delete[] buf;
 	tar_seq_len = _tar_seq_len;
 }
 
