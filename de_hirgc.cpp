@@ -66,7 +66,7 @@ void initialSafe(char *refFile, char *tarFile) {
 	meta_data = new char[2048];
 	std::size_t ref_size = get_file_size(refFile);
 	tar_seq = new char[MAX_CHAR_NUM];
-	ref_seq = new char[ref_size];
+	ref_seq = new char[ref_size+1];
 }
 
 void clear() {

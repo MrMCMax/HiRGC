@@ -71,8 +71,8 @@ inline void initial(char *tar_file, char *ref_file) { // malloc momories
 	n_vec = new  POSITION_RANGE[tar_size];
 	other_char_vec = new POSITION_OTHER_CHAR[tar_size];
 
-	tar_seq_code = new int[tar_size];
-	ref_seq_code = new int[ref_size];
+	tar_seq_code = new int[tar_size+1]; //Null terminated strings
+	ref_seq_code = new int[ref_size+1];
 
 	loc = new int[MAX_CHAR_NUM];
 	point = new int[max_arr_num];
@@ -273,69 +273,67 @@ void readTarFileSafe(char *tarFile) {// processing target file; recording all au
 	meta_data.append("\n");
 	length = length - fp.tellg(); //Ignore the first line
 	//Allocate buffer
-	char *buf = new char[length];
+	char *ch = new char[length];
 	//Read in one go
-	fp.read(buf, length);
-	//Process
-	for (int i = 0; i < length; i++) {
-		chr = buf[i];
-		if (chr == '\n'){
-			line_break_vec[line_break_len++] = i;
-			continue;
-		}
-		if (islower(chr)) {
-			if (flag) { //previous is upper case
-				flag = false; //change status of switch
-				pos_vec[pos_vec_len].begin = (letters_len);
-				letters_len = 0;
-			}
-			chr = toupper(chr);
-		} else {
-			if (isupper(chr)) {
-				if (!flag) {
-					flag = true;
-					pos_vec[pos_vec_len].length = (letters_len);
-					pos_vec_len++;
-					letters_len = 0;
-				}
-			}
-		}
-		letters_len++;
+	fp.read(ch, length);
+	//Process. This code is adapted from the original loop
+    //while (fscanf(fp, "%s", ch) != EOF) {
+    //Now, we only have one line
+        ch_len = length;
 
-		//ch is an upper letter
-		if (chr != 'N') {
-			index = agctIndex(chr);
-			if (index^4) {
-				// tar_seq_code[tar_seq_len++] = code_rule[index];
-				tar_seq_code[_tar_seq_len++] = index;
-			} else {
-				other_char_vec[other_char_len].pos = _tar_seq_len;
-				other_char_vec[other_char_len].ch = chr-'A';
-				other_char_len++;
-			}
-		}
+        for (int i = 0; i < ch_len; i++) {
+            chr = ch[i];
+            if (islower(chr)) {
+                if (flag) { //previous is upper case
+                    flag = false; //change status of switch
+                    pos_vec[pos_vec_len].begin = (letters_len);
+                    letters_len = 0;
+                }
+                chr = toupper(chr);
+            } else {
+                if (isupper(chr)) {
+                    if (!flag) {
+                        flag = true;
+                        pos_vec[pos_vec_len].length = (letters_len);
+                        pos_vec_len++;
+                        letters_len = 0;
+                    }
+                }
+            }
+            letters_len++;
 
-		if (!n_flag) {
-			if (chr == 'N') {
-				n_vec[n_vec_len].begin = n_letters_len;
-				n_letters_len = 0;
-				n_flag = true;
-			}
-		} else {//n_flag = true
-			if (chr != 'N'){
-				n_vec[n_vec_len].length = n_letters_len;
-				n_vec_len++;
-				n_letters_len = 0;
-				n_flag = false;
-			}
-		}
-		n_letters_len++;
-	}
-	//There seems to be a bug in decompression if we don't have any
-	//line breaks
-	if (line_break_len == 0) {
-		line_break_vec[line_break_len++] = 1; //One line break at least
-	}
+            //ch is an upper letter
+            if (chr != 'N') {
+                index = agctIndex(chr);
+                if (index^4) {
+                    // tar_seq_code[tar_seq_len++] = code_rule[index];
+                    tar_seq_code[_tar_seq_len++] = index;
+                } else {
+                    other_char_vec[other_char_len].pos = _tar_seq_len;
+                    other_char_vec[other_char_len].ch = chr-'A';
+                    other_char_len++;
+                }
+            }
+
+            if (!n_flag) {
+                if (chr == 'N') {
+                    n_vec[n_vec_len].begin = n_letters_len;
+                    n_letters_len = 0;
+                    n_flag = true;
+                }
+            } else {//n_flag = true
+                if (chr != 'N'){
+                    n_vec[n_vec_len].length = n_letters_len;
+                    n_vec_len++;
+                    n_letters_len = 0;
+                    n_flag = false;
+                }
+            }
+            n_letters_len++;
+
+        }
+        line_break_vec[line_break_len++] = ch_len;
+
 	
 
 	if (!flag) {
@@ -352,7 +350,7 @@ void readTarFileSafe(char *tarFile) {// processing target file; recording all au
 		other_char_vec[i].pos -= other_char_vec[i-1].pos;
 	}
 	fp.close();
-	delete[] buf;
+	delete[] ch;
 	tar_seq_len = _tar_seq_len;
 }
 
