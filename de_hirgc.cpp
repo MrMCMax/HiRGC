@@ -399,9 +399,9 @@ void decompressFile(char *refFile, char *tarFile) {
 	initialSafe(refFile, tarFile);//****important
 	char cmd[1024]; 
 	if (std::filesystem::exists(".7za")) {
-		sprintf(cmd, "./7za x %s", tarFile);
+		sprintf(cmd, "./7za x \"%s\"", tarFile);
 	} else {
-		sprintf(cmd, "7za x %s", tarFile);
+		sprintf(cmd, "7za x \"%s\"", tarFile);
 	}
 	system(cmd);
 
@@ -426,12 +426,12 @@ void run7za(vector<string> &tar_list) {
 	int list_size = tar_list.size();
 	char cmd[1024]; 
 	for (int i = 0; i < list_size; i++) {
-		sprintf(cmd, "./7za x %s", tar_list[i].c_str());
+		sprintf(cmd, "./7za x \"%s\"", tar_list[i].c_str());
 		system(cmd);
 
 		tar_list[i] = tar_list[i].substr(0, tar_list[i].length()-3);
 		// cerr << tar_list[i];
-		sprintf(cmd, "mkdir %s_dec", tar_list[i].c_str());
+		sprintf(cmd, "mkdir \"%s_dec\"", tar_list[i].c_str());
 		// system(cmd);
 	}
 }
@@ -454,10 +454,10 @@ void decompressGenome(char *ref_fold, char *tar_7z, vector<string> &chr_name_lis
 	// sprintf(cmd, "rm -rf %s", temp);
 	// system(cmd);
 
-	sprintf(cmd, "./7za x %s", tar_7z);
+	sprintf(cmd, "./7za x \"%s\"", tar_7z);
 	system(cmd);
 
-	sprintf(cmd, "mkdir %s_dec", temp);
+	sprintf(cmd, "mkdir \"%s_dec\"", temp);
 	system(cmd);
 
 	printf("the decompress result saved in '%s_dec'\n", temp);
@@ -471,7 +471,7 @@ void decompressGenome(char *ref_fold, char *tar_7z, vector<string> &chr_name_lis
 		decompressFile(ref, tar, res);
 	}
 	
-	sprintf(cmd, "rm -rf %s", temp);
+	sprintf(cmd, "rm -rf \"%s\"", temp);
 	system(cmd);
 
 	clear();
@@ -483,7 +483,7 @@ int decompressSet(char *ref_fold, vector<string> &fold_list, vector<string> &chr
 	run7za(fold_list);
 	int fold_size = fold_list.size();
 	for (int i = 0; i < fold_size; i++) {
-		sprintf(cmd, "mkdir %s_dec", fold_list[i].c_str());
+		sprintf(cmd, "mkdir \"%s_dec\"", fold_list[i].c_str());
 		system(cmd);
 	}
 
@@ -512,7 +512,7 @@ int decompressSet(char *ref_fold, vector<string> &fold_list, vector<string> &chr
 		}
 	}
 	for (int i = 0; i < fold_size; i++) {
-		sprintf(cmd, "rm -rf %s", fold_list[i].c_str());
+		sprintf(cmd, "rm -rf \"%s\"", fold_list[i].c_str());
 		system(cmd);
 	}
 	clear();

@@ -520,12 +520,12 @@ void compressFile(char *refFile, char *tarFile) {
 	compressFile(refFile, tarFile, res);
 	//7za call
 	if (std::filesystem::exists(".7za")) {
-		sprintf(cmd, "./7za a %s.7z %s -m0=PPMd", res, res);
+		sprintf(cmd, "./7za a \"%s.7z\" \"%s\" -m0=PPMd", res, res);
 	} else {
-		sprintf(cmd, "7za a %s.7z %s -m0=PPMd", res, res);
+		sprintf(cmd, "7za a \"%s.7z\" \"%s\" -m0=PPMd", res, res);
 	}
 	system(cmd);
-	sprintf(cmd, "rm %s", res);
+	sprintf(cmd, "rm \"%s\"", res);
 	system(cmd);
 
 	clear();
@@ -536,9 +536,9 @@ void compressGenome(char *refFold, char *tarFold, vector<string> &chr_name_list)
 	char cmd[2048];
 	char temp[100];
 	sprintf(temp, "%s_ref_%s", tarFold, refFold);
-	sprintf(cmd, "rm -r %s", temp);
+	sprintf(cmd, "rm -r \"%s\"", temp);
 	system(cmd);
-	sprintf(cmd, "mkdir %s", temp);
+	sprintf(cmd, "mkdir \"%s\"", temp);
 	system(cmd);
 
 	initial(); //important************* must initial before other operation
@@ -552,10 +552,10 @@ void compressGenome(char *refFold, char *tarFold, vector<string> &chr_name_list)
 		compressFile(ref, tar, res);
 	}
 	
-	sprintf(cmd, "./7za a %s.7z %s -m0=PPMd", temp, temp);
+	sprintf(cmd, "./7za a \"%s.7z\" \"%s\" -m0=PPMd", temp, temp);
 	system(cmd);
 
-	sprintf(cmd, "rm -r %s", temp);
+	sprintf(cmd, "rm -r \"%s\"", temp);
 	system(cmd);
 	
 	clear();
@@ -570,9 +570,9 @@ int compressSet(char *ref_fold, vector<string> &fold_list, vector<string> &chr_n
 
 	for (int ti = 0; ti < fold_size; ti++) {
 		sprintf(temp, "%s_ref_%s", fold_list[ti].c_str(), ref_fold);
-		sprintf(cmd, "rm -r %s", temp);
+		sprintf(cmd, "rm -r \"%s\"", temp);
 		system(cmd);
-		sprintf(cmd, "mkdir %s", temp);
+		sprintf(cmd, "mkdir \"%s\"", temp);
 		system(cmd);
 	}
 
@@ -603,10 +603,10 @@ int compressSet(char *ref_fold, vector<string> &fold_list, vector<string> &chr_n
 	for (int ti = 0; ti < fold_size; ti++) {
 		sprintf(temp, "%s_ref_%s", fold_list[ti].c_str(), ref_fold);
 
-		sprintf(cmd, "./7za a %s.7z %s -m0=PPMd", temp, temp);
+		sprintf(cmd, "./7za a \"%s.7z\" \"%s\" -m0=PPMd", temp, temp);
 		system(cmd);
 
-		sprintf(cmd, "rm -r %s", temp);
+		sprintf(cmd, "rm -r \"%s\"", temp);
 		system(cmd);
 	}
 	clear();
