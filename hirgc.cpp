@@ -15,10 +15,13 @@
 # include <unistd.h>
 # include <string>
 # include <filesystem>
+#include "../../hrlz/include/hrlz/Compressors.hpp"
 
 using namespace std;
 
 namespace hirgc_compress {
+
+static bool verbose;
  
 const int MAX_CHAR_NUM = 1<<28;//maximum length of a chromosome
 const int code_rule[4] = {0, 1, 2, 3};//A-0; C-1; G-2; T-3; encoding rule //discarded
@@ -664,6 +667,8 @@ int hirgc_main(int argc, char *argv[]) {
 	optind = 1;
 	vector<string> chr_name_list;
 	vector<string> fold_list;
+
+    verbose = Compressors::verbose;
 
 	bool flag = true, compressed = false;
 	int oc;
